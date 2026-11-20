@@ -118,18 +118,97 @@ As rotas e os formatos JSON são exatamente os que o app já usa em `src/service
 
 ---
 
-## 4. Integração com o app mobile
+## 4. Integração com o frontend (Expo/React Native)
 
-No `.env` do app (pasta `GS_Irrigacao`):
+O frontend do *Solo Vivo*, desenvolvido com Expo, React Native e TypeScript, consome a API REST desenvolvida em Java 21 e Spring Boot 3.5.
 
-```
-EXPO_PUBLIC_API_BASE_URL=http://SEU_IP_NA_REDE:8080/api
+A integração utiliza requisições HTTP e respostas JSON, permitindo autenticação, consulta e cadastro de cultivos, monitoramento de sensores, gerenciamento de alertas e controle de irrigação.
+
+### 4.1. Iniciar o backend
+
+Na pasta do backend, execute:
+
+bash
+# Linux / macOS
+./mvnw spring-boot:test-run
+
+
+O comando inicia a API com PostgreSQL embarcado e dados de demonstração.
+
+*Endereços:*
+- API: http://localhost:8080/api
+- Swagger: http://localhost:8080/swagger-ui.html
+
+### 4.2. Configurar o frontend
+
+Na pasta GS_Irrigacao, crie ou edite o arquivo .env:
+
+env
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8080/api
 EXPO_PUBLIC_USE_MOCK=false
-```
 
-- `localhost` só funciona no Expo Web/simulador iOS. No Android Emulator use `http://10.0.2.2:8080/api`;
-  no celular físico use o IP do computador na rede (ex.: `http://192.168.0.10:8080/api`).
-- O app ainda não tem tela de exclusão; o `DELETE /cultivos/{id}` pode ser demonstrado pelo Swagger.
+
+A variável EXPO_PUBLIC_USE_MOCK=false desativa o uso de dados mockados no frontend, permitindo o consumo da API real.
+
+*Endereços conforme o ambiente:*
+
+| Ambiente | URL da API |
+|---|---|
+| Expo Web / simulador iOS no mesmo Mac | http://localhost:8080/api |
+| Android Emulator | http://10.0.2.2:8080/api |
+| Celular físico | http://IP_DO_COMPUTADOR:8080/api |
+
+Para utilizar um celular físico, o dispositivo deverá conseguir acessar o backend pela rede local.
+
+### 4.3. Instalar e executar o frontend
+
+Na pasta GS_Irrigacao, execute:
+
+bash
+npm ci --legacy-peer-deps
+npx expo start --web --clear
+
+
+O parâmetro --legacy-peer-deps contorna o conflito de dependências identificado na instalação do projeto. O frontend é iniciado no navegador, normalmente em:
+
+http://localhost:8081
+
+Mantenha o backend e o frontend executando simultaneamente em terminais separados.
+
+### 4.4. Autenticação
+
+O frontend realiza login pelo endpoint:
+
+POST /api/auth/login
+
+Usuário de demonstração:
+
+- *E-mail:* maria@email.com
+- *Senha:* solovivo123
+
+Após a autenticação, a API retorna um token JWT, utilizado pelo aplicativo para acessar os endpoints protegidos.
+
+### 4.5. Validação da integração
+
+A comunicação entre frontend e backend foi verificada utilizando o Chrome DevTools e o Swagger.
+
+| Funcionalidade | Endpoint | Resultado |
+|---|---|---|
+| Consulta de cultivos | GET /api/cultivos | HTTP 200, dados JSON exibidos no frontend |
+| Cadastro de cultivo | POST /api/cultivos | Canteiro 4 cadastrado e retornado pela API |
+| Consulta de alertas | GET /api/alertas?status=ativos | HTTP 200 |
+| Controle de acesso | GET /api/cultivos sem autenticação | HTTP 401, acesso negado |
+| Irrigação manual | POST /api/cultivos/{id}/irrigacao/acionar | Acionamento registrado; duração e consumo final ainda pendentes de validação |
+
+*Resultado:* a integração de consulta e cadastro de cultivos entre frontend, API e banco de dados foi validada. As funcionalidades de sensores IoT e irrigação automática ainda necessitam de validação completa de ponta a ponta.
+
+### 4.6. Observações
+
+- O banco PostgreSQL embarcado recria os dados de demonstração a cada inicialização.
+- O Swagger não compartilha automaticamente a autenticação do frontend. Para consultar endpoints protegidos, é necessário obter um JWT pelo login e utilizar *Authorize*.
+- O frontend e o backend devem estar executando simultaneamente.
+- O aplicativo ainda não possui tela de exclusão de cultivos. O endpoint DELETE /api/cultivos/{id} pode ser testado pelo Swagger.
+- A integração com o ESP32 e os sensores simulados está documentada na seção *5. Simulação de IoT*.
 
 ---
 
