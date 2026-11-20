@@ -1,0 +1,38 @@
+name: solo-vivo
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: solo-vivo-db
+    environment:
+      POSTGRES_DB: solo_vivo
+      POSTGRES_USER: solovivo
+      POSTGRES_PASSWORD: solovivo
+      TZ: America/Sao_Paulo
+    ports:
+      - "5432:5432"
+    volumes:
+      # Executados em ordem alfabetica na primeira subida do banco:
+      # 01-dump-iot.sql (estrutura + dados) e 02-ajustes-api.sql (perfis e senhas)
+      - ./database:/docker-entrypoint-initdb.d:ro
+      - solo-vivo-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U solovivo -d solo_vivo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Opcional: broker MQTT privado/local, alternativa ao broker publico broker.hivemq.com.
+  # Sobe apenas com: docker compose --profile mqtt up -d   (e use MQTT_BROKER_URL=tcp://localhost:1883;
+  # o ESP32 tambem precisa apontar para esse broker)
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: solo-vivo-mqtt
+    profiles: ["mqtt"]
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+volumes:
+  solo-vivo-data:

@@ -1,0 +1,7 @@
+{
+  "leituras": [
+    { "sensor": "Sensor de solo 01", "valor": 24 },
+    { "tipo": "temperatura_ar", "valor": 31 },
+    { "tipo": "umidade_ar", "valor": 62 }
+  ]
+}

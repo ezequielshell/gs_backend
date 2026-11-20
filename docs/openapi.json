@@ -1,0 +1,1268 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Solo Vivo API",
+    "description" : "API REST do Solo Vivo: cultivos, limites de umidade, leituras de sensores (IoT simulado),\nirrigacao manual/automatica, alertas e historico.\n\nComo testar: faca POST /api/auth/login (maria@email.com / solovivo123), copie o token e\nclique em \"Authorize\". Os endpoints /api/iot usam o header X-Device-Token (demo-token-esp32-01).\n",
+    "version" : "1.0.0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost",
+    "description" : "Generated server url"
+  } ],
+  "tags" : [ {
+    "name" : "Usuários (admin)",
+    "description" : "Somente perfil ADMIN"
+  }, {
+    "name" : "Cultivos",
+    "description" : "Canteiros, limites, irrigação e histórico"
+  }, {
+    "name" : "Autenticação",
+    "description" : "Login e cadastro (públicos)"
+  }, {
+    "name" : "Culturas",
+    "description" : "Catálogo de culturas com limites sugeridos"
+  }, {
+    "name" : "IoT",
+    "description" : "Entrada de leituras dos sensores (ESP32 ou simulador)"
+  }, {
+    "name" : "Alertas",
+    "description" : "Alertas gerados pelas leituras dos sensores"
+  }, {
+    "name" : "Perfil",
+    "description" : "Dados do usuário logado e preferências de notificação"
+  } ],
+  "paths" : {
+    "/api/perfil" : {
+      "get" : {
+        "tags" : [ "Perfil" ],
+        "summary" : "Perfil do usuário logado",
+        "operationId" : "obter",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PerfilResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Perfil" ],
+        "summary" : "Atualiza nome, e-mail, propriedade e notificações",
+        "operationId" : "atualizar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PerfilUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PerfilResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/cultivos/{id}/limites" : {
+      "put" : {
+        "tags" : [ "Cultivos" ],
+        "summary" : "Atualiza limites de umidade, tempo máximo, vazão e automação",
+        "operationId" : "atualizarLimites",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateLimitesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CultivoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/alertas/{id}/resolver" : {
+      "put" : {
+        "tags" : [ "Alertas" ],
+        "summary" : "Marca um alerta como resolvido",
+        "operationId" : "resolver",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AlertaResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/iot/leituras" : {
+      "post" : {
+        "tags" : [ "IoT" ],
+        "summary" : "Recebe leituras dos sensores, gera alertas e aplica a irrigação automática",
+        "description" : "Autenticado pelo header X-Device-Token (token_api do dispositivo). Exemplo: {\"leituras\":[{\"sensor\":\"Sensor de solo 01\",\"valor\":24},{\"tipo\":\"temperatura_ar\",\"valor\":31},{\"tipo\":\"umidade_ar\",\"valor\":62}]}",
+        "operationId" : "receber",
+        "parameters" : [ {
+          "name" : "X-Device-Token",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LeiturasRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Leituras gravadas; decisões da automação na resposta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeiturasResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Leitura inválida (sensor desconhecido ou valor fora da faixa)",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeiturasResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Token do dispositivo ausente ou inválido",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeiturasResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "deviceToken" : [ ]
+        } ]
+      }
+    },
+    "/api/culturas" : {
+      "get" : {
+        "tags" : [ "Culturas" ],
+        "summary" : "Lista culturas padrão + culturas do usuário",
+        "operationId" : "listar",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CulturaResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Culturas" ],
+        "summary" : "[ADMIN] Cadastra cultura padrão do sistema",
+        "operationId" : "criar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CulturaRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CulturaResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/cultivos" : {
+      "get" : {
+        "tags" : [ "Cultivos" ],
+        "summary" : "Lista os cultivos com status atual (adequado | atencao | sem_leitura)",
+        "operationId" : "listar_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CultivoResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Cultivos" ],
+        "summary" : "Cadastra um novo cultivo (canteiro)",
+        "operationId" : "criar_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateCultivoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Cultivo criado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CultivoResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Dados inválidos (ex.: mínima >= máxima, sensor inexistente)",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CultivoResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Já existe cultivo com este nome",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CultivoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/cultivos/{id}/irrigacao/acionar" : {
+      "post" : {
+        "tags" : [ "Cultivos" ],
+        "summary" : "Liga/desliga a irrigação manualmente, ou só troca o modo (apenasAlterarModo=true)",
+        "operationId" : "acionarIrrigacao",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AcionarIrrigacaoRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Comando confirmado pela bomba e registrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CultivoResponse"
+                }
+              }
+            }
+          },
+          "503" : {
+            "description" : "Bomba não confirmou o comando: nada foi registrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CultivoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/auth/register" : {
+      "post" : {
+        "tags" : [ "Autenticação" ],
+        "summary" : "Cadastro de novo produtor (cria também uma propriedade padrão)",
+        "operationId" : "register",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Cadastrado e autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "E-mail já cadastrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login" : {
+      "post" : {
+        "tags" : [ "Autenticação" ],
+        "summary" : "Login com e-mail e senha; retorna o token JWT",
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "E-mail ou senha inválidos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Muitas tentativas: e-mail bloqueado temporariamente",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios" : {
+      "get" : {
+        "tags" : [ "Usuários (admin)" ],
+        "summary" : "[ADMIN] Lista todos os usuários",
+        "operationId" : "listar_2",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/UsuarioResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/cultivos/{id}" : {
+      "get" : {
+        "tags" : [ "Cultivos" ],
+        "summary" : "Detalhes de um cultivo, com leituras atuais e gráfico das últimas 24h",
+        "operationId" : "buscar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "404" : {
+            "description" : "Cultivo não encontrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CultivoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Cultivos" ],
+        "summary" : "Exclui (desativa) o cultivo; desliga a bomba se estiver ligada",
+        "operationId" : "excluir",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Cultivo excluído"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/cultivos/{id}/historico" : {
+      "get" : {
+        "tags" : [ "Cultivos" ],
+        "summary" : "Histórico de irrigações, consumo estimado e tempo fora da faixa",
+        "operationId" : "historico",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "periodo",
+          "in" : "query",
+          "description" : "hoje | 7d | 30d",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "7d"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HistoricoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/alertas" : {
+      "get" : {
+        "tags" : [ "Alertas" ],
+        "summary" : "Lista alertas ativos ou resolvidos",
+        "operationId" : "listar_3",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "description" : "ativos | resolvidos",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "ativos"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AlertaResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/culturas/{id}" : {
+      "delete" : {
+        "tags" : [ "Culturas" ],
+        "summary" : "[ADMIN] Remove uma cultura",
+        "operationId" : "excluir_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "NotificacoesDto" : {
+        "type" : "object",
+        "properties" : {
+          "soloAbaixoLimite" : {
+            "type" : "boolean"
+          },
+          "semLeituraSensor" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "semLeituraSensor", "soloAbaixoLimite" ]
+      },
+      "PerfilUpdateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "nome" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "maxLength" : 160,
+            "minLength" : 0
+          },
+          "propriedade" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "notificacoes" : {
+            "$ref" : "#/components/schemas/NotificacoesDto"
+          },
+          "tema" : {
+            "type" : "string",
+            "pattern" : "claro|escuro|sistema"
+          }
+        },
+        "required" : [ "email", "nome", "notificacoes", "propriedade" ]
+      },
+      "PerfilResponse" : {
+        "type" : "object",
+        "properties" : {
+          "nome" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "propriedade" : {
+            "type" : "string"
+          },
+          "notificacoes" : {
+            "$ref" : "#/components/schemas/NotificacoesDto"
+          },
+          "perfil" : {
+            "type" : "string"
+          },
+          "tema" : {
+            "type" : "string"
+          }
+        }
+      },
+      "UpdateLimitesRequest" : {
+        "type" : "object",
+        "properties" : {
+          "umidadeMin" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 100,
+            "minimum" : 0
+          },
+          "umidadeMax" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 100,
+            "minimum" : 0
+          },
+          "tempoMaximoMin" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 120,
+            "minimum" : 1
+          },
+          "vazaoLMin" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 1000,
+            "minimum" : 0.01
+          },
+          "irrigacaoAutomaticaAtivada" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "irrigacaoAutomaticaAtivada", "tempoMaximoMin", "umidadeMax", "umidadeMin", "vazaoLMin" ]
+      },
+      "CultivoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "cultura" : {
+            "type" : "string"
+          },
+          "sensor" : {
+            "type" : "string"
+          },
+          "umidadeSolo" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "umidadeMin" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "umidadeMax" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "temperatura" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "umidadeAr" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "mensagemStatus" : {
+            "type" : "string"
+          },
+          "atualizadoEm" : {
+            "type" : "string"
+          },
+          "ultimaLeituraEm" : {
+            "type" : "string"
+          },
+          "modoIrrigacao" : {
+            "type" : "string"
+          },
+          "irrigacaoAtiva" : {
+            "type" : "boolean"
+          },
+          "irrigacaoAutomaticaAtivada" : {
+            "type" : "boolean"
+          },
+          "irrigacaoPausadaMotivo" : {
+            "type" : "string"
+          },
+          "tempoMaximoMin" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "vazaoLMin" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "consumoEstimadoL" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "historico24h" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MoisturePoint"
+            }
+          }
+        }
+      },
+      "MoisturePoint" : {
+        "type" : "object",
+        "properties" : {
+          "hora" : {
+            "type" : "string"
+          },
+          "umidade" : {
+            "type" : "number",
+            "format" : "double"
+          }
+        }
+      },
+      "AlertaResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "cultivoId" : {
+            "type" : "string"
+          },
+          "cultivoNome" : {
+            "type" : "string"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "horario" : {
+            "type" : "string"
+          },
+          "severidade" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "mensagem" : {
+            "type" : "string"
+          },
+          "acao" : {
+            "type" : "string"
+          },
+          "valor" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "criadoEm" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LeituraItemRequest" : {
+        "type" : "object",
+        "properties" : {
+          "sensorId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sensor" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "tipo" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "minLength" : 0
+          },
+          "valor" : {
+            "type" : "number",
+            "format" : "double"
+          }
+        },
+        "required" : [ "valor" ]
+      },
+      "LeiturasRequest" : {
+        "type" : "object",
+        "properties" : {
+          "leituras" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LeituraItemRequest"
+            },
+            "maxItems" : 50,
+            "minItems" : 0
+          },
+          "lidaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "leituras" ]
+      },
+      "DecisaoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "cultivoId" : {
+            "type" : "string"
+          },
+          "cultivo" : {
+            "type" : "string"
+          },
+          "sensor" : {
+            "type" : "string"
+          },
+          "valor" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "acao" : {
+            "type" : "string"
+          },
+          "descricao" : {
+            "type" : "string"
+          },
+          "alertasAbertos" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "alertasResolvidos" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "LeiturasResponse" : {
+        "type" : "object",
+        "properties" : {
+          "dispositivo" : {
+            "type" : "string"
+          },
+          "recebidas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "lidaEm" : {
+            "type" : "string"
+          },
+          "decisoes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DecisaoResponse"
+            }
+          }
+        }
+      },
+      "CulturaRequest" : {
+        "type" : "object",
+        "properties" : {
+          "nome" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "umidadeMinPadrao" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 100,
+            "minimum" : 0
+          },
+          "umidadeMaxPadrao" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 100,
+            "minimum" : 0
+          }
+        },
+        "required" : [ "nome", "umidadeMaxPadrao", "umidadeMinPadrao" ]
+      },
+      "CulturaResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "umidadeMinPadrao" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "umidadeMaxPadrao" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "padraoSistema" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "CreateCultivoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "nome" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "cultura" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "sensor" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "sensorId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "umidadeMin" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 100,
+            "minimum" : 0
+          },
+          "umidadeMax" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 100,
+            "minimum" : 0
+          },
+          "vazaoLMin" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 1000,
+            "minimum" : 0.01
+          },
+          "tempoMaximoMin" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 120,
+            "minimum" : 1
+          }
+        },
+        "required" : [ "cultura", "nome", "umidadeMax", "umidadeMin", "vazaoLMin" ]
+      },
+      "AcionarIrrigacaoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "modo" : {
+            "type" : "string",
+            "pattern" : "manual|automatico"
+          },
+          "apenasAlterarModo" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "RegisterRequest" : {
+        "type" : "object",
+        "properties" : {
+          "nome" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "maxLength" : 160,
+            "minLength" : 0
+          },
+          "senha" : {
+            "type" : "string",
+            "maxLength" : 72,
+            "minLength" : 8
+          }
+        },
+        "required" : [ "email", "nome", "senha" ]
+      },
+      "AuthUserResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "perfil" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LoginResponse" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "expiraEmSegundos" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/AuthUserResponse"
+          }
+        }
+      },
+      "LoginRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "maxLength" : 160,
+            "minLength" : 0
+          },
+          "senha" : {
+            "type" : "string",
+            "maxLength" : 72,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "email", "senha" ]
+      },
+      "UsuarioResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "perfil" : {
+            "type" : "string"
+          },
+          "ativo" : {
+            "type" : "boolean"
+          },
+          "criadoEm" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AcionamentoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "origem" : {
+            "type" : "string"
+          },
+          "descricaoRegra" : {
+            "type" : "string"
+          },
+          "dataHoraLabel" : {
+            "type" : "string"
+          },
+          "duracaoMin" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "emAndamento" : {
+            "type" : "boolean"
+          },
+          "volumeLitros" : {
+            "type" : "number",
+            "format" : "double"
+          }
+        }
+      },
+      "HistoricoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "periodo" : {
+            "type" : "string"
+          },
+          "irrigacoes" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "consumoEstimadoL" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "tempoForaFaixa" : {
+            "type" : "string"
+          },
+          "tempoForaFaixaSegundos" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "acionamentos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AcionamentoResponse"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      },
+      "deviceToken" : {
+        "type" : "apiKey",
+        "name" : "X-Device-Token",
+        "in" : "header"
+      }
+    }
+  }
+}
